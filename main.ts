@@ -34,14 +34,16 @@ Deno.serve(async (req) => {
         userAgent: req.headers.get("user-agent"),
         timestamp: new Date().toISOString(),
       });
-      } else if (url.pathname === "/secret") {
-  const secret = Deno.env.get("LAB_SECRET");
+    } else if (url.pathname === "/secret") {
+      const secret = Deno.env.get("LAB_SECRET");
 
-  response = Response.json({
-    configured: Boolean(secret),
-    message: secret ? "Secret is configured" : "Secret is missing",
-  });
-          } else if (url.pathname === "/error") {
+      response = Response.json({
+        configured: Boolean(secret),
+        message: secret
+          ? "Secret is configured"
+          : "Secret is missing",
+      });
+    } else if (url.pathname === "/error") {
       throw new Error("Test error from Mehran's Deno Lab");
     } else {
       response = Response.json(
@@ -69,7 +71,9 @@ Deno.serve(async (req) => {
       requestId,
       method: req.method,
       path: url.pathname,
-      error: error instanceof Error ? error.message : String(error),
+      error: error instanceof Error
+        ? error.message
+        : String(error),
       timestamp: new Date().toISOString(),
     });
 
