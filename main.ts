@@ -17,24 +17,49 @@ Deno.serve(async (req) => {
   try {
     let response: Response;
 
-    if (url.pathname === "/") {
+    // --------------------------------------------------
+    // HOME
+    // --------------------------------------------------
+
+    if (url.pathname === "/" && req.method === "GET") {
       response = new Response(
-        "Hello from Mehran's Deno Lab! 🚀 VERSION 7",
+        "Hello from Mehran's Deno Lab! 🚀 VERSION 8",
       );
 
-    } else if (url.pathname === "/status") {
+    // --------------------------------------------------
+    // STATUS
+    // --------------------------------------------------
+
+    } else if (
+      url.pathname === "/status" &&
+      req.method === "GET"
+    ) {
       response = Response.json({
         status: "online",
         platform: "Deno Deploy",
         version: "1.0",
       });
 
-    } else if (url.pathname === "/time") {
+    // --------------------------------------------------
+    // TIME
+    // --------------------------------------------------
+
+    } else if (
+      url.pathname === "/time" &&
+      req.method === "GET"
+    ) {
       response = Response.json({
         serverTime: new Date().toISOString(),
       });
 
-    } else if (url.pathname === "/info") {
+    // --------------------------------------------------
+    // INFO
+    // --------------------------------------------------
+
+    } else if (
+      url.pathname === "/info" &&
+      req.method === "GET"
+    ) {
       response = Response.json({
         method: req.method,
         url: req.url,
@@ -42,88 +67,257 @@ Deno.serve(async (req) => {
         timestamp: new Date().toISOString(),
       });
 
-    } else if (url.pathname === "/secret") {
-      const secret = Deno.env.get("LAB_SECRET");
+    // --------------------------------------------------
+    // DATABASE TEST
+    // --------------------------------------------------
+
+    } else if (
+      url.pathname === "/db-test" &&
+      req.method === "GET"
+    ) {
+      const result = await pool.query(
+        "SELECT 1 AS result",
+      );
 
       response = Response.json({
-        configured: Boolean(secret),
-        message: secret
-          ? "Secret is configured"
-          : "Secret is missing",
+        database: "connected",
+        result: result.rows[0].result,
       });
 
-    } else if (url.pathname === "/db-test") {
+    // --------------------------------------------------
+    // DATABASE INITIALIZATION
+    // --------------------------------------------------
+
+    } else if (
+      url.pathname === "/db-init" &&
+      req.method === "GET"
+    ) {
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS users (
+          id SERIAL PRIMARY KEY,
+          name VARCHAR(100) NOT NULL,
+          email VARCHAR(255) NOT NULL UNIQUE,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `);
+
+      response = Response.json({
+        database: "connected",
+        table: "users",
+        status: "created_or_exists",
+      });
+
+    // --------------------------------------------------
+    // GET ALL USERS
+    // --------------------------------------------------
+
+    } else if (
+      url.pathname === "/users" &&
+      req.method === "GET"
+    ) {
+      const result = await pool.query(`
+        SELECT
+          id,
+          name,
+          email,
+          created_at
+        FROM users
+        ORDER BY id ASC
+      `);
+
+      response = Response.json({
+        count: result.rows.length,
+        users: result.rows,
+      });
+
+    // --------------------------------------------------
+    // CREATE USER
+    // --------------------------------------------------
+
+    } else if (
+      url.pathname === "/users" &&
+      req.method === "POST"
+    ) {
+      let body: {
+        name?: string;
+        email?: string;
+      };
+
+      try {
+        body = await req.json();
+      } catch {
+        response = Response.json(
+          {
+            error: "Invalid JSON body",
+          },
+          { status: 400 },
+        );
+
+        return response;
+      }
+
+      const name = body.name?.trim();
+      const email = body.email?.trim();
+
+      if (!name || !email) {
+        response = Response.json(
+          {
+            error: "name and email are required",
+          },
+          { status: 400 },
+        );
+
+        return response;
+      }
+
       try {
         const result = await pool.query(
-          "SELECT 1 AS result",
+          `
+          INSERT INTO users (name, email)
+          VALUES ($1, $2)
+          RETURNING id, name, email, created_at
+          `,
+          [name, email],
         );
 
-        response = Response.json({
-          database: "connected",
-          result: result.rows[0].result,
-        });
+        response = Response.json(
+          result.rows[0],
+          { status: 201 },
+        );
 
-      } catch (dbError) {
+      } catch (error) {
         console.error(
-          "Database query failed:",
-          dbError,
+          "User creation failed:",
+          error,
         );
 
         response = Response.json(
           {
-            database: "error",
-            message: "Database connection failed",
+            error: "Could not create user",
           },
-          { status: 500 },
+          { status: 409 },
         );
       }
 
-    } else if (url.pathname === "/db-init") {
-      try {
-        await pool.query(`
-          CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(100) NOT NULL,
-            email VARCHAR(255) NOT NULL UNIQUE,
-            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-          )
-        `);
+    // --------------------------------------------------
+    // GET USER BY ID
+    // --------------------------------------------------
 
-        response = Response.json({
-          database: "connected",
-          table: "users",
-          status: "created_or_exists",
-        });
+    } else if (
+      url.pathname.startsWith("/users/") &&
+      req.method === "GET"
+    ) {
+      const id = url.pathname.split("/")[2];
 
-      } catch (dbError) {
-        console.error(
-          "Database initialization failed:",
-          dbError,
-        );
-
+      if (!id || !/^\d+$/.test(id)) {
         response = Response.json(
           {
-            database: "error",
-            message: "Database initialization failed",
+            error: "Invalid user ID",
           },
-          { status: 500 },
+          { status: 400 },
         );
+
+      } else {
+        const result = await pool.query(
+          `
+          SELECT
+            id,
+            name,
+            email,
+            created_at
+          FROM users
+          WHERE id = $1
+          `,
+          [Number(id)],
+        );
+
+        if (result.rows.length === 0) {
+          response = Response.json(
+            {
+              error: "User not found",
+            },
+            { status: 404 },
+          );
+        } else {
+          response = Response.json(
+            result.rows[0],
+          );
+        }
       }
 
-    } else if (url.pathname === "/error") {
+    // --------------------------------------------------
+    // DELETE USER
+    // --------------------------------------------------
+
+    } else if (
+      url.pathname.startsWith("/users/") &&
+      req.method === "DELETE"
+    ) {
+      const id = url.pathname.split("/")[2];
+
+      if (!id || !/^\d+$/.test(id)) {
+        response = Response.json(
+          {
+            error: "Invalid user ID",
+          },
+          { status: 400 },
+        );
+
+      } else {
+        const result = await pool.query(
+          `
+          DELETE FROM users
+          WHERE id = $1
+          RETURNING id, name, email
+          `,
+          [Number(id)],
+        );
+
+        if (result.rows.length === 0) {
+          response = Response.json(
+            {
+              error: "User not found",
+            },
+            { status: 404 },
+          );
+        } else {
+          response = Response.json({
+            deleted: true,
+            user: result.rows[0],
+          });
+        }
+      }
+
+    // --------------------------------------------------
+    // TEST ERROR
+    // --------------------------------------------------
+
+    } else if (
+      url.pathname === "/error" &&
+      req.method === "GET"
+    ) {
       throw new Error(
         "Test error from Mehran's Deno Lab",
       );
+
+    // --------------------------------------------------
+    // NOT FOUND
+    // --------------------------------------------------
 
     } else {
       response = Response.json(
         {
           error: "Not Found",
           path: url.pathname,
+          method: req.method,
         },
         { status: 404 },
       );
     }
+
+    // --------------------------------------------------
+    // RESPONSE LOG
+    // --------------------------------------------------
 
     console.log({
       type: "response",
