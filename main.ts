@@ -15,7 +15,7 @@ Deno.serve(async (req) => {
 
     if (url.pathname === "/") {
       response = new Response(
-        "Hello from Mehran's Deno Lab! 🚀 VERSION 3",
+        "Hello from Mehran's Deno Lab! 🚀 VERSION 4",
       );
     } else if (url.pathname === "/status") {
       response = Response.json({
@@ -43,8 +43,22 @@ Deno.serve(async (req) => {
           ? "Secret is configured"
           : "Secret is missing",
       });
+    } else if (url.pathname === "/env-check") {
+      const envNames = [...Deno.env.keys()]
+        .filter((name) =>
+          name === "DATABASE_URL" ||
+          name.startsWith("PG")
+        )
+        .sort();
+
+      response = Response.json({
+        databaseEnvironmentVariables: envNames,
+        count: envNames.length,
+      });
     } else if (url.pathname === "/error") {
-      throw new Error("Test error from Mehran's Deno Lab");
+      throw new Error(
+        "Test error from Mehran's Deno Lab",
+      );
     } else {
       response = Response.json(
         {
