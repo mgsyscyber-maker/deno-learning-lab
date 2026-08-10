@@ -18,7 +18,14 @@ Deno.serve((req) => {
       serverTime: new Date().toISOString(),
     });
   }
-
+if (url.pathname === "/info") {
+  return Response.json({
+    method: req.method,
+    url: req.url,
+    userAgent: req.headers.get("user-agent"),
+    timestamp: new Date().toISOString(),
+  });
+}
   return Response.json(
     {
       error: "Not Found",
