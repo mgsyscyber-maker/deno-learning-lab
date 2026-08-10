@@ -57,6 +57,21 @@ Deno.serve(async (req) => {
           database: "connected",
           result: result.rows[0].result,
         });
+        } else if (url.pathname === "/db-init") {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(100) NOT NULL,
+      email VARCHAR(255) NOT NULL UNIQUE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  response = Response.json({
+    database: "connected",
+    table: "users",
+    status: "created_or_exists",
+  });
       } catch (dbError) {
         console.error("Database query failed:", dbError);
 
