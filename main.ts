@@ -1,6 +1,6 @@
-import postgres from "npm:postgres";
+import { Pool } from "npm:pg";
 
-const sql = postgres();
+const pool = new Pool();
 
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
@@ -19,7 +19,7 @@ Deno.serve(async (req) => {
 
     if (url.pathname === "/") {
       response = new Response(
-        "Hello from Mehran's Deno Lab! 🚀 VERSION 5",
+        "Hello from Mehran's Deno Lab! 🚀 VERSION 6",
       );
     } else if (url.pathname === "/status") {
       response = Response.json({
@@ -48,12 +48,26 @@ Deno.serve(async (req) => {
           : "Secret is missing",
       });
     } else if (url.pathname === "/db-test") {
-      const result = await sql`SELECT 1 AS result`;
+      try {
+        const result = await pool.query(
+          "SELECT 1 AS result",
+        );
 
-      response = Response.json({
-        database: "connected",
-        result: result[0].result,
-      });
+        response = Response.json({
+          database: "connected",
+          result: result.rows[0].result,
+        });
+      } catch (dbError) {
+        console.error("Database query failed:", dbError);
+
+        response = Response.json(
+          {
+            database: "error",
+            message: "Database connection failed",
+          },
+          { status: 500 },
+        );
+      }
     } else if (url.pathname === "/error") {
       throw new Error(
         "Test error from Mehran's Deno Lab",
