@@ -1,3 +1,4 @@
+```typescript
 Deno.serve((req) => {
   const url = new URL(req.url);
 
@@ -31,6 +32,10 @@ Deno.serve((req) => {
       userAgent: req.headers.get("user-agent"),
       timestamp: new Date().toISOString(),
     });
+  } else if (url.pathname === "/error") {
+    throw new Error(
+      "This is a test error from Mehran's Deno Lab",
+    );
   } else {
     response = Response.json(
       {
@@ -51,3 +56,4 @@ Deno.serve((req) => {
 
   return response;
 });
+```
