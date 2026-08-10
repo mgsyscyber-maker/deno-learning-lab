@@ -1,3 +1,7 @@
+import postgres from "npm:postgres";
+
+const sql = postgres();
+
 Deno.serve(async (req) => {
   const requestId = crypto.randomUUID();
   const url = new URL(req.url);
@@ -15,7 +19,7 @@ Deno.serve(async (req) => {
 
     if (url.pathname === "/") {
       response = new Response(
-        "Hello from Mehran's Deno Lab! 🚀 VERSION 4",
+        "Hello from Mehran's Deno Lab! 🚀 VERSION 5",
       );
     } else if (url.pathname === "/status") {
       response = Response.json({
@@ -43,17 +47,12 @@ Deno.serve(async (req) => {
           ? "Secret is configured"
           : "Secret is missing",
       });
-    } else if (url.pathname === "/env-check") {
-      const envNames = [...Deno.env.keys()]
-        .filter((name) =>
-          name === "DATABASE_URL" ||
-          name.startsWith("PG")
-        )
-        .sort();
+    } else if (url.pathname === "/db-test") {
+      const result = await sql`SELECT 1 AS result`;
 
       response = Response.json({
-        databaseEnvironmentVariables: envNames,
-        count: envNames.length,
+        database: "connected",
+        result: result[0].result,
       });
     } else if (url.pathname === "/error") {
       throw new Error(
