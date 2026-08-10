@@ -2,7 +2,7 @@ Deno.serve((req) => {
   const url = new URL(req.url);
 
   if (url.pathname === "/") {
-    return new Response("Hello from Mehran's Deno Lab! 🚀");
+    return new Response("Hello from Mehran's Deno Lab! 🚀 v2");
   }
 
   if (url.pathname === "/status") {
