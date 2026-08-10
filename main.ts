@@ -1,4 +1,6 @@
 Deno.serve((req) => {
+  console.log(`[REQUEST] ${req.method} ${new URL(req.url).pathname}`);
+
   const url = new URL(req.url);
 
   if (url.pathname === "/") {
