@@ -19,18 +19,21 @@ Deno.serve(async (req) => {
 
     if (url.pathname === "/") {
       response = new Response(
-        "Hello from Mehran's Deno Lab! 🚀 VERSION 6",
+        "Hello from Mehran's Deno Lab! 🚀 VERSION 7",
       );
+
     } else if (url.pathname === "/status") {
       response = Response.json({
         status: "online",
         platform: "Deno Deploy",
         version: "1.0",
       });
+
     } else if (url.pathname === "/time") {
       response = Response.json({
         serverTime: new Date().toISOString(),
       });
+
     } else if (url.pathname === "/info") {
       response = Response.json({
         method: req.method,
@@ -38,6 +41,7 @@ Deno.serve(async (req) => {
         userAgent: req.headers.get("user-agent"),
         timestamp: new Date().toISOString(),
       });
+
     } else if (url.pathname === "/secret") {
       const secret = Deno.env.get("LAB_SECRET");
 
@@ -47,6 +51,7 @@ Deno.serve(async (req) => {
           ? "Secret is configured"
           : "Secret is missing",
       });
+
     } else if (url.pathname === "/db-test") {
       try {
         const result = await pool.query(
@@ -57,23 +62,12 @@ Deno.serve(async (req) => {
           database: "connected",
           result: result.rows[0].result,
         });
-        } else if (url.pathname === "/db-init") {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      name VARCHAR(100) NOT NULL,
-      email VARCHAR(255) NOT NULL UNIQUE,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `);
 
-  response = Response.json({
-    database: "connected",
-    table: "users",
-    status: "created_or_exists",
-  });
       } catch (dbError) {
-        console.error("Database query failed:", dbError);
+        console.error(
+          "Database query failed:",
+          dbError,
+        );
 
         response = Response.json(
           {
@@ -83,10 +77,44 @@ Deno.serve(async (req) => {
           { status: 500 },
         );
       }
+
+    } else if (url.pathname === "/db-init") {
+      try {
+        await pool.query(`
+          CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            email VARCHAR(255) NOT NULL UNIQUE,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          )
+        `);
+
+        response = Response.json({
+          database: "connected",
+          table: "users",
+          status: "created_or_exists",
+        });
+
+      } catch (dbError) {
+        console.error(
+          "Database initialization failed:",
+          dbError,
+        );
+
+        response = Response.json(
+          {
+            database: "error",
+            message: "Database initialization failed",
+          },
+          { status: 500 },
+        );
+      }
+
     } else if (url.pathname === "/error") {
       throw new Error(
         "Test error from Mehran's Deno Lab",
       );
+
     } else {
       response = Response.json(
         {
@@ -107,6 +135,7 @@ Deno.serve(async (req) => {
     });
 
     return response;
+
   } catch (error) {
     console.error({
       type: "error",
